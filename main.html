@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DEPO SUMBER BANGUNAN - INVENTORY</title>
+    <link rel="icon" href="depo.png" type="image/png">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+
+    <style>
+        /* ========================================= */
+        /* CSS MENU BURGER BARU */
+        /* ========================================= */
+        .header-menu {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            z-index: 20; /* Lebih tinggi dari elemen lain */
+        }
+
+        #menuToggle {
+            background: none;
+            border: none;
+            color: var(--primary-color);
+            font-size: 24px;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 50%;
+            transition: background-color 0.3s;
+        }
+
+        #menuToggle:hover {
+            background-color: #e0e0e0;
+        }
+
+        .dropdown-menu {
+            position: absolute;
+            top: 45px;
+            right: 0;
+            background-color: #ffffff;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            border-radius: var(--border-radius-small);
+            min-width: 180px;
+            padding: 5px 0;
+            display: none; /* Sembunyikan secara default */
+            z-index: 100;
+        }
+
+        .dropdown-menu.show {
+            display: block;
+            animation: slideDown 0.2s ease-out;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .dropdown-menu a {
+            display: block;
+            padding: 10px 15px;
+            text-decoration: none;
+            color: var(--text-dark);
+            font-weight: 500;
+            transition: background-color 0.2s;
+            white-space: nowrap; /* Mencegah teks menu terpotong */
+        }
+
+        .dropdown-menu a:hover {
+            background-color: #f5f5f5;
+            color: var(--primary-color);
+        }
+
+        .dropdown-menu i {
+            margin-right: 8px;
+            width: 15px; /* Lebar tetap untuk ikon */
+            text-align: center;
+        }
+
+        /* END CSS MENU BURGER BARU */
+        /* ----------------------------------------- */
+        
+        /* CSS tambahan untuk Nama User Aktif (activeUserDisplay) */
+        .active-user {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 10px 15px;
+            background-color: #e0f7fa; /* Warna latar belakang ringan */
+            color: #00838f;
+            border-radius: var(--border-radius-small);
+            font-weight: 700;
+            font-size: 0.95em;
+            border: 1px solid #b2ebf2;
+        }
+        .active-user span {
+            color: var(--primary-color);
+            font-weight: 800;
+        }
+        
+        /* KODE ASLI: Gaya untuk label user kecil di kiri atas */
+        .user-label {
+            /* === MODIFIKASI: Tambahkan flex untuk menyejajarkan user dan tombol logout === */
+            display: flex; 
+            justify-content: space-between; /* Pisahkan konten ke kiri dan kanan */
+            align-items: center; /* Posisikan vertikal di tengah */
+            
+            text-align: left;
+            margin-top: -15px; 
+            margin-bottom: 25px; 
+            font-size: 0.75em;
+            font-weight: 600;
+            color: var(--secondary-color);
+            padding-left: 5px;
+            /* === AKHIR MODIFIKASI === */
+        }
+        .user-label strong {
+            color: var(--primary-color);
+            font-weight: 700;
+        }
+
+        /* === GAYA TOMBOL LOGOUT BARU DI HEADER UTAMA === */
+        #logoutButton {
+            background: none;
+            border: none;
+            color: #f44336; /* Merah */
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.9rem; /* Sedikit lebih besar dari teks user untuk fokus */
+            transition: color 0.2s;
+            padding: 5px 8px; /* Padding agar mudah diklik */
+            border-radius: 4px;
+        }
+
+        #logoutButton i {
+            margin-right: 3px;
+        }
+
+        #logoutButton:hover {
+            color: #b71c1c;
+            background-color: #ffebee; /* Latar belakang hover ringan */
+        }
+        /* AKHIR GAYA TOMBOL LOGOUT BARU */
+        
+        .autocomplete-type {
+            font-size: 0.8em;
+            color: var(--secondary-color); /* Atau warna abu-abu lainnya */
+            margin-left: 10px;
+            font-weight: 400;
+        }
+
+        .autocomplete-item {
+            /* Pastikan ada padding yang cukup */
+            padding: 10px; 
+            cursor: pointer;
+            background-color: #fff; 
+            border-bottom: 1px solid #d4d4d4;
+            display: flex; /* Untuk menyejajarkan nama barang dan jenis produk */
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .autocomplete-item:hover, .autocomplete-active {
+            background-color: #e9e9e9;
+        }
+
+        /* ========================================= */
+        /* CSS KHUSUS UNTUK QR SCANNER BARU (POSISI SAMPING INPUT) */
+        /* ========================================= */
+
+        /* Container input lokasi agar bisa menampung input dan tombol scan */
+        .lokasi-input-wrapper {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .lokasi-input-wrapper input {
+            flex-grow: 1; /* Biarkan input mengambil sebagian besar ruang */
+        }
+
+        #scanLokasiButton {
+            background-color: #00bcd4; /* Warna sekunder yang cerah */
+            color: white;
+            border: none;
+            border-radius: var(--border-radius-small);
+            padding: 10px 12px;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+            line-height: 1;
+            box-shadow: 0 4px 10px rgba(0, 188, 212, 0.3);
+        }
+
+        #scanLokasiButton:hover {
+            background-color: #0097a7;
+            transform: translateY(-1px);
+        }
+        
+        /* Modal atau Wadah Scanner */
+        #qr-scanner-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.85); /* Overlay gelap */
+            z-index: 2000;
+            display: none; /* Sembunyikan secara default */
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+        
+        #qr-reader-container {
+            width: 90%;
+            max-width: 400px;
+            padding: 20px;
+            background-color: var(--card-bg);
+            border-radius: var(--border-radius-large);
+            box-shadow: var(--shadow-heavy);
+        }
+
+        #qr-reader {
+            width: 100%;
+            margin-bottom: 15px;
+            border: 2px solid var(--primary-color);
+            border-radius: var(--border-radius-small);
+            overflow: hidden;
+        }
+
+        #scannerClose {
+            background-color: var(--danger-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: var(--border-radius-small);
+            font-weight: 600;
+            margin-top: 15px;
+            cursor: pointer;
+        }
+
+        #qr-status {
+             text-align: center;
+             color: var(--primary-color);
+             font-weight: 600;
+             margin-bottom: 10px;
+        }
+        /* END CSS KHUSUS UNTUK QR SCANNER BARU */
+
+    </style>
+
+</head>
+<body class="mode-masuk"> 
+    <div class="container">
+        <div class="header-menu">
+            <button id="menuToggle" aria-label="Toggle Menu">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div id="dropdownMenu" class="dropdown-menu">
+                <a href="main.html"><i class="fas fa-file-invoice"></i> Transaksi Input</a>
+                <a href="cek-stok.html"><i class="fas fa-search-dollar"></i> Cek Stok</a>
+            </div>
+        </div>
+        <div class="app-title">
+            <img id="appLogo" src="depo.png" alt="Logo Sumber Bangunan">
+            <div class="mode-status" id="modeStatus">INVENTORY - MASUK</div>
+        </div>
+
+        <div id="userLabel" class="user-label">
+            <span id="activeUserDisplay"></span>
+            <button id="logoutButton" title="Keluar dari Aplikasi">
+                <i class="fas fa-sign-out-alt"></i> Logout
+            </button>
+        </div>
+        
+        <form id="inventoryForm">
+            <div class="input-group">
+                <label><i class="fas fa-cubes"></i> Kategori Barang</label>
+                <div class="category-buttons">
+                    <button type="button" class="category-btn" data-category="BESI" id="btnBesi">
+                        <i class="fas fa-hammer"></i> BESI
+                    </button>
+                    <button type="button" class="category-btn" data-category="KERAMIK" id="btnKeramik">
+                        <i class="fas fa-couch"></i> KERAMIK
+                    </button>
+                    <button type="button" class="category-btn" data-category="LT 2" id="btnLt2">
+                        <i class="fas fa-layer-group"></i> LT 2
+                    </button>
+                    <button type="button" class="category-btn" data-category="GM" id="btnGm">
+                        <i class="fas fa-truck-loading"></i> GM
+                    </button>
+                </div>
+                <input type="hidden" id="kategori" name="kategori" required>
+            </div>
+
+            <div class="input-group">
+                <label for="jenisProduk"><i class="fas fa-stream"></i> Jenis Produk</label>
+                <select id="jenisProduk" name="jenisProduk" disabled required>
+                    <option value="">-- Pilih Kategori Dulu --</option>
+                </select>
+            </div>
+
+            <div class="input-group hidden" id="filterContainer">
+                <label for="filterSelect" id="filterLabel"><i class="fas fa-filter"></i> Filter Produk</label>
+                <div class="input-control">
+                    <select id="filterSelect" name="filterSelect" class="filter-select">
+                        <option value="">-- Pilih Filter --</option>
+                        </select>
+                </div>
+            </div>
+            <div class="input-group">
+                <label for="namaBarang"><i class="fas fa-box-open"></i> Nama Barang</label>
+                <div class="autocomplete-container input-control">
+                    <input type="text" id="namaBarang" name="namaBarang" placeholder="Ketik nama barang..." disabled required>
+                    <div id="autocomplete-list" class="autocomplete-items">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="input-group" id="lokasiInputGroup">
+                <label for="lokasi"><i class="fas fa-map-marker-alt"></i> Lokasi</label>
+                <div class="lokasi-input-wrapper">
+                    <input type="text" id="lokasi" name="lokasi" placeholder="Masukan Lokasi atau Scan QR" required>
+                    <button type="button" id="scanLokasiButton" title="Scan QR Lokasi">
+                        <i class="fas fa-camera"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="input-group">
+                <label for="jumlah"><i class="fas fa-sort-numeric-up-alt"></i> Jumlah</label>
+                <div class="input-control">
+                    <input type="number" id="jumlah" name="jumlah" placeholder="Masukkan jumlah" required min="1">
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label for="checker"><i class="fas fa-comment-dots"></i> Keterangan</label>
+                <div class="input-control">
+                    <input type="text" id="checker" name="checker" placeholder="Keterangan (Bukan Nama User)">
+                </div>
+            </div>
+            
+            <input type="hidden" id="formatSimpan" name="formatSimpan" value=""> 
+
+            <div class="submit-buttons">
+                <button type="button" id="masukButton" class="submit-btn" data-action="Masuk">
+                    <i class="fas fa-arrow-alt-circle-up"></i> MASUK
+                </button>
+                <button type="button" id="keluarButton" class="submit-btn hidden" data-action="Keluar">
+                    <i class="fas fa-arrow-alt-circle-down"></i> KELUAR
+                </button>
+            </div>
+
+            <p id="message" class="message"></p>
+        </form>
+        
+        <div id="app-footer-copyright" class="footer-copyright"></div> 
+    </div>
+    
+    <button id="fabToggle">
+        <i class="fas fa-exchange-alt"></i> Ganti ke KELUAR
+    </button>
+    
+    <div id="qr-scanner-overlay">
+        <div id="qr-reader-container">
+            <div id="qr-status">Arahkan kamera ke QR Lokasi...</div>
+            <div id="qr-reader"></div>
+            <button id="scannerClose"><i class="fas fa-times"></i> Tutup Scanner</button>
+        </div>
+    </div>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+<script>
+    // Inisialisasi variabel global untuk scanner
+    let html5QrcodeScanner = null;
+    let isScannerRunning = false;
+
+    document.addEventListener("DOMContentLoaded", () => {
+        const menuToggle = document.getElementById('menuToggle');
+        const dropdownMenu = document.getElementById('dropdownMenu');
+        const scanLokasiButton = document.getElementById('scanLokasiButton');
+        const scannerOverlay = document.getElementById('qr-scanner-overlay');
+        const scannerCloseButton = document.getElementById('scannerClose');
+        const lokasiInput = document.getElementById('lokasi');
+        const qrStatus = document.getElementById('qr-status');
+        
+        // =========================================
+        // LOGIKA MENU DROPDOWN
+        // =========================================
+        menuToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            dropdownMenu.classList.toggle('show');
+        });
+
+        document.addEventListener('click', (e) => {
+            if (dropdownMenu.classList.contains('show') && !menuToggle.contains(e.target) && !dropdownMenu.contains(e.target)) {
+                dropdownMenu.classList.remove('show');
+            }
+        });
+
+        // =========================================
+        // JAVASCRIPT UNTUK QR CODE SCANNER LOKASI
+        // =========================================
+
+        const qrCodeSuccessCallback = (decodedText, decodedResult) => {
+            console.log(`Lokasi Scan result: ${decodedText}`);
+            
+            // 1. Masukkan hasil pindai ke input Lokasi
+            lokasiInput.value = decodedText;
+            qrStatus.textContent = `✅ Berhasil: ${decodedText}`;
+
+            // 2. Hentikan scanner dan tutup modal
+            stopScanner();
+        };
+
+        const qrCodeErrorCallback = (errorMessage) => {
+            if (isScannerRunning) {
+                qrStatus.textContent = `Arahkan kamera ke QR Lokasi...`;
+            }
+        };
+
+        const startScanner = () => {
+            if (isScannerRunning) return;
+            
+            // Tampilkan modal
+            scannerOverlay.style.display = 'flex';
+            qrStatus.textContent = `Memulai kamera...`;
+
+            if (!html5QrcodeScanner) {
+                 // Inisialisasi scanner hanya sekali
+                html5QrcodeScanner = new Html5QrcodeScanner(
+                    "qr-reader", 
+                    { 
+                        fps: 10, 
+                        qrbox: {width: 250, height: 250},
+                        facingMode: "environment", // Prioritas kamera belakang
+                        disableFlip: true, 
+                        videoConstraints: {
+                            facingMode: { ideal: "environment" },
+                        }
+                    },
+                    /* verbose: false */
+                );
+            }
+
+            // Memulai pemindaian
+            html5QrcodeScanner.render(qrCodeSuccessCallback, qrCodeErrorCallback);
+            isScannerRunning = true;
+        };
+        
+        const stopScanner = () => {
+             if (html5QrcodeScanner && isScannerRunning) {
+                // Hentikan proses kamera
+                html5QrcodeScanner.clear().then(() => {
+                    isScannerRunning = false;
+                    scannerOverlay.style.display = 'none'; // Sembunyikan modal
+                    console.log("Scanner dihentikan.");
+                }).catch(err => {
+                    console.error("Gagal menghentikan scanner: ", err);
+                    isScannerRunning = false; // Tetap atur ke false meskipun gagal
+                    scannerOverlay.style.display = 'none';
+                });
+            } else {
+                 scannerOverlay.style.display = 'none';
+            }
+        };
+
+
+        // Listener untuk tombol kamera/scan
+        scanLokasiButton.addEventListener('click', startScanner);
+        
+        // Listener untuk tombol tutup di modal
+        scannerCloseButton.addEventListener('click', stopScanner);
+
+        // Listener untuk menutup saat mengklik di luar area (hanya untuk keamanan)
+        scannerOverlay.addEventListener('click', (e) => {
+             if (e.target.id === 'qr-scanner-overlay') {
+                 stopScanner();
+             }
+        });
+        
+        // =========================================
+        
+    });
+</script>
+<script src="script.js"></script>
+</body>
+</html>

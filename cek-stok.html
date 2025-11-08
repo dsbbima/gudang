@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stok Produk - Cek Realtime</title>
+    
+    <style>
+        /* ========================================= */
+        /* CSS MENU BURGER BARU */
+        /* ========================================= */
+        .header-menu {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            z-index: 20;
+        }
+
+        #menuToggle {
+            background: none;
+            border: none;
+            color: var(--primary-color);
+            font-size: 24px;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 50%;
+            transition: background-color 0.3s;
+        }
+
+        #menuToggle:hover {
+            background-color: #e0e0e0;
+        }
+
+        .dropdown-menu {
+            position: absolute;
+            top: 45px;
+            right: 0;
+            background-color: #ffffff;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            border-radius: var(--border-radius);
+            min-width: 180px;
+            padding: 5px 0;
+            display: none;
+            z-index: 100;
+        }
+
+        .dropdown-menu.show {
+            display: block;
+            animation: slideDown 0.2s ease-out;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .dropdown-menu a {
+            display: block;
+            padding: 10px 15px;
+            text-decoration: none;
+            color: var(--text-dark);
+            font-weight: 500;
+            transition: background-color 0.2s;
+            white-space: nowrap;
+        }
+
+        .dropdown-menu a:hover {
+            background-color: #f5f5f5;
+            color: var(--primary-color);
+        }
+
+        .dropdown-menu i {
+            margin-right: 8px;
+            width: 15px;
+            text-align: center;
+        }
+
+        /* END CSS MENU BURGER BARU */
+        /* ----------------------------------------- */
+        
+        /* ========================================= */
+        /* CSS MODERN & RESPONSIVE */
+        /* ========================================= */
+        
+        :root {
+            --primary-color: #1a73e8; /* Biru Google */
+            --secondary-color: #fbbc05; /* Kuning */
+            --background-light: #f7f9fc;
+            --text-dark: #202124;
+            --border-radius: 12px;
+        }
+
+        /* Pengaturan Dasar */
+        body {
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--background-light);
+            color: var(--text-dark);
+            font-size: 14px; 
+            line-height: 1.6;
+        }
+
+        /* Kontainer Utama */
+        .container {
+            max-width: 1000px; 
+            margin: 20px auto;
+            background-color: #ffffff;
+            padding: 24px;
+            border-radius: var(--border-radius);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+            /* Animasi masuk */
+            animation: fadeIn 0.8s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h1 {
+            text-align: center;
+            margin-top: 0;
+            color: var(--primary-color);
+            font-size: 28px; 
+            font-weight: 600;
+            margin-bottom: 25px;
+        }
+        
+        /* Kontainer Input */
+        .search-container {
+            position: relative;
+            margin-bottom: 25px;
+        }
+
+        #searchInput {
+            width: 100%;
+            padding: 12px 40px 12px 15px;
+            border: 1px solid #dadce0;
+            border-radius: var(--border-radius);
+            box-sizing: border-box; 
+            font-size: 16px; 
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        
+        #searchInput:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.2);
+        }
+
+ /* Tombol Hapus (Clear) */
+        #clearButton {
+            position: absolute;
+            right: 5px; 
+            top: 40%;
+            /* Pastikan transform ini benar-benar membawa ke tengah */
+            transform: translateY(-50%) scale(1); 
+            cursor: pointer;
+            color: #70757a;
+            font-size: 18px;
+            line-height: 1;
+            display: none;
+            transition: color 0.2s, transform 0.2s;
+        }
+
+        #clearButton:hover {
+            color: var(--text-dark);
+            transform: translateY(-50%) scale(1.1);
+        }
+        
+        /* Kontainer Tabel */
+        .table-container {
+            max-height: 60vh; 
+            overflow-y: auto;   
+            overflow-x: hidden; 
+            border: 1px solid #eee;
+            border-radius: var(--border-radius);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            transition: box-shadow 0.3s ease;
+        }
+        
+        /* Efek Shadow saat Hover */
+        .table-container:hover {
+             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Tabel */
+        #stockTable {
+            width: 100%;
+            border-collapse: separate; 
+            border-spacing: 0;
+            table-layout: fixed;
+        }
+
+        /* Header Tabel */
+        #stockTable thead {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        #stockTable th {
+            background-color: var(--primary-color);
+            color: white;
+            font-weight: 500;
+            padding: 15px 12px;
+            text-align: left;
+            border: none;
+        }
+        
+        /* Border Radius pada Header Sudut */
+        #stockTable thead tr:first-child th:first-child { border-top-left-radius: var(--border-radius); }
+        #stockTable thead tr:first-child th:last-child { border-top-right-radius: var(--border-radius); }
+
+        /* Sel Data */
+        #stockTable td {
+            padding: 12px 12px; 
+            text-align: left;
+            border-bottom: 1px solid #eee; 
+            word-wrap: break-word; 
+            transition: background-color 0.3s, transform 0.1s;
+        }
+
+        /* Baris Tabel Ganjil-Genap (Zebra) */
+        #stockTable tbody tr:nth-of-type(even) {
+            background-color: #fcfcfc;
+        }
+
+        /* Animasi Hover Baris */
+        #stockTable tbody tr:hover {
+            background-color: #e8f0fe; 
+            cursor: pointer;
+            transform: scale(1.005);
+            box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+        }
+        
+        /* ========================================= */
+        /* PENGATURAN LEBAR KOLOM BARU (4 Kolom: 45% | 15% | 20% | 20%) */
+        /* ========================================= */
+        
+        /* Nama Barang (Kolom 1) */
+        #stockTable th:nth-child(1),
+        #stockTable td:nth-child(1) { width: 45%; } 
+        
+        /* Lokasi (Kolom 2) - Rata Tengah */
+        #stockTable th:nth-child(2),
+        #stockTable td:nth-child(2) { 
+            width: 15%;
+            text-align: center;
+        } 
+        
+        /* Qty Gudang (Kolom 3) - Rata Tengah dan Font Tebal */
+        #stockTable th:nth-child(3) { 
+            width: 20%; 
+            text-align: center;
+        }
+        #stockTable td:nth-child(3) {
+            width: 20%;
+            text-align: center;
+            font-weight: 600;
+            color: var(--primary-color); /* Biru untuk Qty Gudang */
+        } 
+
+        /* Qty Affary (Kolom 4) - BARU - Rata Tengah dan Font Tebal */
+        #stockTable th:nth-child(4) { 
+            width: 20%; 
+            text-align: center;
+        }
+        #stockTable td:nth-child(4) {
+            width: 20%;
+            text-align: center;
+            font-weight: 600;
+            color: #e8710a; /* Warna Oranye untuk Qty Affary */
+        }
+        
+        /* Pesan Loading & Error */
+        #message {
+            text-align: center;
+            padding: 25px;
+            font-style: italic;
+            color: #777;
+            background-color: #fff3cd;
+            border-radius: var(--border-radius);
+            margin-top: 20px;
+            border: 1px solid #ffeeba;
+        }
+        
+        /* RESPONSIVITAS MOBILE (40% | 10% | 25% | 25%) */
+        @media (max-width: 650px) {
+            .container {
+                margin: 10px;
+                padding: 15px;
+                border-radius: 0;
+            }
+            
+            h1 {
+                font-size: 24px;
+            }
+            
+            .table-container {
+                max-height: 70vh;
+                overflow-x: hidden; 
+            }
+            
+            #stockTable {
+                table-layout: fixed;
+            }
+            
+            /* Penyesuaian lebar kolom di mobile agar pas 100% */
+            #stockTable th:nth-child(1),
+            #stockTable td:nth-child(1) { width: 55%; } /* Nama Barang */
+            
+            /* Lokasi (Kolom 2) di Mobile */
+            #stockTable th:nth-child(2),
+            #stockTable td:nth-child(2) { 
+                width: 15%; 
+                text-align: center;
+            } 
+            
+            /* Qty Gudang (Kolom 3) di Mobile */
+            #stockTable th:nth-child(3),
+            #stockTable td:nth-child(3) { 
+                width: 15%; 
+                text-align: center;
+            } 
+
+            /* Qty Affary (Kolom 4) di Mobile */
+            #stockTable th:nth-child(4),
+            #stockTable td:nth-child(4) { 
+                width: 15%; 
+                text-align: center;
+            }
+            
+            #stockTable th, #stockTable td {
+                padding: 8px 5px; /* Kurangi padding di mobile */
+                font-size: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header-menu">
+        <button id="menuToggle" aria-label="Toggle Menu">
+            <i class="fas fa-bars"></i>
+        </button>
+        <div id="dropdownMenu" class="dropdown-menu">
+            <a href="main.html"><i class="fas fa-file-invoice"></i> Transaksi Input</a>
+            <a href="cek-stok.html"><i class="fas fa-search-dollar"></i> Cek Stok</a>
+        </div>
+    </div>
+    <div class="container">
+        <h1>🔎 CEK SISA STOCK GUDANG</h1>
+        
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="Ketik Nama Produk..." autocomplete="off">
+            <span id="clearButton" title="Hapus Pencarian">❌</span>
+        </div>
+        
+        <div class="table-container">
+            <table id="stockTable">
+                <thead>
+                    <tr>
+                        <th>Nama Barang</th>
+                        <th>Lokasi</th>
+                        <th>Qty Gudang</th>
+                        <th>Qty Affary</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    </tbody>
+            </table>
+        </div>
+        
+        <div id="message">Memuat data dari Google Sheet...</div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            // --- LOGIKA MENU BURGER ---
+            const menuToggle = document.getElementById('menuToggle');
+            const dropdownMenu = document.getElementById('dropdownMenu');
+
+            // Toggle menu saat tombol burger diklik
+            menuToggle.addEventListener('click', (e) => {
+                e.stopPropagation();
+                dropdownMenu.classList.toggle('show');
+            });
+
+            // Sembunyikan menu saat mengklik di luar area menu
+            document.addEventListener('click', (e) => {
+                if (dropdownMenu.classList.contains('show') && !menuToggle.contains(e.target) && !dropdownMenu.contains(e.target)) {
+                    dropdownMenu.classList.remove('show');
+                }
+            });
+            // --- AKHIR LOGIKA MENU BURGER ---
+
+            // --- KONFIGURASI SPREADSHEET BARU ---
+            // GANTI DENGAN ID SPREADSHEET ANDA!
+            const SHEET_ID = '1IEADNCoA30ggaO8l6pgXzJsjyjph0l2SU05U-jWxjvo'; 
+            const SHEET_NAME = 'CEK STOCK'; // Pastikan nama sheet ini benar
+            const URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${SHEET_NAME}`;
+
+            // --- ELEMEN DOM ---
+            const searchInput = document.getElementById('searchInput');
+            const clearButton = document.getElementById('clearButton'); 
+            const tableBody = document.getElementById('tableBody');
+            const messageEl = document.getElementById('message');
+            
+            let allData = []; 
+
+            /**
+             * Mengambil dan mem-parsing data dari Google Sheet (A, B, C, D)
+             */
+            async function fetchData() {
+                try {
+                    const response = await fetch(URL);
+                    if (!response.ok) {
+                        throw new Error(`Gagal mengambil data (HTTP Status: ${response.status})`);
+                    }
+                    
+                    let text = await response.text();
+                    
+                    const jsonString = text.substring(text.indexOf('(') + 1, text.lastIndexOf(')'));
+                    const data = JSON.parse(jsonString);
+
+                    if (!data.table || !data.table.rows) {
+                        throw new Error('Format data tidak valid.');
+                    }
+
+                    // Mengolah data mentah (Kolom A, B, C, D)
+                    allData = data.table.rows
+                        .map(row => {
+                            // Kolom A (index 0) = Nama Barang
+                            // Kolom B (index 1) = Lokasi
+                            // Kolom C (index 2) = Qty Gudang
+                            // Kolom D (index 3) = Qty Affary <-- DITAMBAHKAN
+                            const colA = row.c[0] ? row.c[0].v : ''; 
+                            const colB = row.c[1] ? row.c[1].v : ''; 
+                            const colC = row.c[2] ? (row.c[2].f || row.c[2].v) : 0; 
+                            const colD = row.c[3] ? (row.c[3].f || row.c[3].v) : 0;
+                            
+                            // Filter baris header
+                            if (typeof colA === 'string' && colA.toLowerCase().includes('nama barang')) {
+                                return null; 
+                            }
+
+                            return {
+                                produk: colA ? colA.toString() : '',
+                                lokasi: colB ? colB.toString() : '',
+                                qtyGudang: colC, 
+                                qtyAffary: colD 
+                            };
+                        })
+                        // Filter baris kosong/invalid
+                        .filter(row => row !== null && row.produk && row.lokasi); 
+
+                    renderTable(allData); 
+                    messageEl.style.display = 'none'; 
+                    updateClearButtonVisibility(); 
+                    searchInput.focus(); 
+
+                } catch (error) {
+                    console.error('Error saat mengambil data:', error);
+                    messageEl.textContent = `Error: ${error.message}. Pastikan Google Sheet sudah di-set "Siapa saja yang memiliki link dapat melihat".`;
+                    messageEl.style.color = '#721c24';
+                    messageEl.style.backgroundColor = '#f8d7da';
+                    messageEl.style.border = '1px solid #f5c6cb';
+                }
+            }
+
+            /**
+             * Menampilkan data ke dalam tabel HTML
+             */
+            function renderTable(data) {
+                tableBody.innerHTML = ''; 
+                
+                if (data.length === 0) {
+                    // colspan diubah menjadi 4
+                    tableBody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px;">🚫 Tidak ada data yang cocok ditemukan.</td></tr>';
+                    return;
+                }
+
+                const fragment = document.createDocumentFragment();
+                data.forEach(row => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${row.produk}</td>
+                        <td>${row.lokasi}</td>
+                        <td>${row.qtyGudang}</td> 
+                        <td>${row.qtyAffary}</td> `;
+                    fragment.appendChild(tr);
+                });
+                
+                tableBody.appendChild(fragment);
+            }
+
+            /**
+             * Fungsi pencarian dengan Debouncing
+             */
+            function handleSearch() {
+                if (window.searchTimeout) {
+                    clearTimeout(window.searchTimeout);
+                }
+                
+                window.searchTimeout = setTimeout(() => {
+                    const searchTerm = searchInput.value.toLowerCase().trim();
+                    updateClearButtonVisibility();
+
+                    const keywords = searchTerm.split(/\s+/).filter(k => k.length > 0);
+
+                    if (keywords.length === 0) {
+                        renderTable(allData);
+                        return;
+                    }
+
+                    const filteredData = allData.filter(row => {
+                        const searchString = (row.produk + " " + row.lokasi).toLowerCase();
+
+                        // Return true hanya jika SEMUA kata kunci ditemukan
+                        return keywords.every(keyword => searchString.includes(keyword));
+                    });
+                    
+                    renderTable(filteredData);
+                }, 100); 
+            }
+
+            /**
+             * Menampilkan/menyembunyikan tombol hapus (❌)
+             */
+            function updateClearButtonVisibility() {
+                if (searchInput.value.length > 0) {
+                    clearButton.style.display = 'block';
+                } else {
+                    clearButton.style.display = 'none';
+                }
+            }
+
+            /**
+             * Fungsi untuk menghapus input
+             */
+            function clearSearch() {
+                searchInput.value = ''; 
+                searchInput.focus();    
+                handleSearch(); 
+            }
+
+            // --- Menjalankan Fungsi ---
+            searchInput.addEventListener('input', handleSearch); 
+            clearButton.addEventListener('click', clearSearch); 
+            fetchData(); 
+        });
+    </script>
+
+</body>
+</html>
