@@ -461,7 +461,7 @@ function setupEventListeners() {
 
         if (matches.length > 0) {
             autocompleteList.style.display = 'block';
-            appBody.style.overflow = 'hidden';
+            appBody.style.overflow = '';
         }
     });
 
@@ -749,17 +749,17 @@ async function handleFormSubmit(e, action) {
     submissionQueue.push({ dataToSend, action });
     displayMessage(`Data ditambahkan ke antrian (${submissionQueue.length} transaksi tertunda)...`, 'info');
     
-    // 🔥 PERUBAHAN: Reset form segera setelah masuk antrian (kecuali Kategori dan Checker)
-    // Simpan KATEGORI yang sudah dipilih agar tetap aktif dan simpan data sebelum reset
+    // Simpan KATEGORI yang sudah dipilih agar tetap aktif dan simpan data sebelum reset
+    // User aktif (activeUser) diambil dari localStorage, jadi checkerInput boleh dikosongkan.
     const tempKategori = kategoriInput.value;
     const selectedCategory = currentCategory;
     
-    // 1. Reset Form Input (SEMUA KECUALI KATEGORI DAN CHECKER/USER AKTIF)
+    // 1. Reset Form Input (SEMUA KECUALI KATEGORI)
     jumlahInput.value = '';
-    // checkerInput.value = ''; // Jangan di-reset agar user aktif tetap ada
+    checkerInput.value = ''; // <--- PERUBAHAN BARU: Input Keterangan/Checker dikosongkan
     lokasiInput.value = '';
-    namaBarangInput.value = ''; // KOSONGKAN Nama Barang
-    jenisProdukSelect.value = ''; // KOSONGKAN Jenis Produk
+    namaBarangInput.value = ''; 
+    jenisProdukSelect.value = ''; 
     autocompleteList.style.display = 'none';
     namaBarangInput.disabled = false;
     
