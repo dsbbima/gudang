@@ -748,6 +748,37 @@ async function handleFormSubmit(e, action) {
     // Masukkan data ke antrian dan segera mulai pemrosesan
     submissionQueue.push({ dataToSend, action });
     displayMessage(`Data ditambahkan ke antrian (${submissionQueue.length} transaksi tertunda)...`, 'info');
+    
+    // 🔥 PERUBAHAN: Reset form segera setelah masuk antrian (kecuali Kategori dan Checker)
+    // Simpan KATEGORI yang sudah dipilih agar tetap aktif dan simpan data sebelum reset
+    const tempKategori = kategoriInput.value;
+    const selectedCategory = currentCategory;
+    
+    // 1. Reset Form Input (SEMUA KECUALI KATEGORI DAN CHECKER/USER AKTIF)
+    jumlahInput.value = '';
+    // checkerInput.value = ''; // Jangan di-reset agar user aktif tetap ada
+    lokasiInput.value = '';
+    namaBarangInput.value = ''; // KOSONGKAN Nama Barang
+    jenisProdukSelect.value = ''; // KOSONGKAN Jenis Produk
+    autocompleteList.style.display = 'none';
+    namaBarangInput.disabled = false;
+    
+    // KATEGORI HARUS TETAP AKTIF/TERPILIH
+    kategoriInput.value = tempKategori;
+    currentCategory = selectedCategory;
+
+    // 2. Isi Ulang Cache Data Barang yang tersedia saat ini dan reset dropdown Jenis
+    const cacheDataForReload = currentCategory ? currentCategoryData : inventoryDataCache;
+    const isGlobalReload = !currentCategory;
+    
+    // Perbarui dropdown jenis produk dan cache
+    updateJenisProdukAndProductCache(cacheDataForReload, isGlobalReload); 
+    jenisProdukSelect.value = ''; // Pastikan Jenis Produk juga kosong
+
+    // SET FOKUS KE NAMA BARANG
+    namaBarangInput.focus();
+    // ------------------------------------------
+
     processQueue();
     
     isSubmitting = false;
@@ -757,39 +788,7 @@ async function handleFormSubmit(e, action) {
 async function sendDataToBackend(dataToSend, action) {
     const targetSheet = dataToSend.targetSheet;
     
-    // Simpan KATEGORI yang sudah dipilih agar tetap aktif dan simpan data sebelum reset
-    const tempKategori = kategoriInput.value;
-    const selectedCategory = currentCategory;
-    const tempJenisProduk = jenisProdukSelect.value;
-    const tempNamaBarang = namaBarangInput.value;
-
-    // 1. Reset Form Input
-    jumlahInput.value = '';
-    checkerInput.value = '';
-    lokasiInput.value = '';
-    namaBarangInput.value = ''; // KOSONGKAN Nama Barang
-    jenisProdukSelect.value = ''; // KOSONGKAN Jenis Produk
-    autocompleteList.style.display = 'none';
-    namaBarangInput.disabled = false;
-    
-    // KATEGORI HARUS TETAP AKTIF/TERPILIH
-    kategoriInput.value = tempKategori;
-    currentCategory = selectedCategory;
-
-    // 2. Isi Ulang Cache Data Barang yang tersedia saat ini.
-    const cacheDataForReload = currentCategory ? currentCategoryData : inventoryDataCache;
-    const isGlobalReload = !currentCategory;
-    
-    updateJenisProdukAndProductCache(cacheDataForReload, isGlobalReload); 
-    
-    // Set ulang nilai jenis produk setelah dropdown diisi
-    jenisProdukSelect.value = tempJenisProduk;
-
-    // SET FOKUS KE NAMA BARANG
-    namaBarangInput.focus();
-    // ------------------------------------------
-
-    // 3. Tampilkan pesan sedang antri/mengirim
+    // 1. Tampilkan pesan sedang antri/mengirim
     displayMessage(`⏳ Data Barang **${action.toUpperCase()}** ke sheet **${targetSheet}** sedang dikirim di latar belakang...`, 'loading');
 
     const urlEncodedData = Object.keys(dataToSend).map(key =>
