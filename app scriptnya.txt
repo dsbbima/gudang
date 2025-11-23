@@ -1,0 +1,334 @@
+// =================================================================
+// Kode.gs (GOOGLE APPS SCRIPT) - VERSI DENGAN CACHING & INSTANT REFRESH
+// =================================================================
+
+// =================================================================
+// KONFIGURASI APLIKASI
+// =================================================================
+const LOG_SPREADSHEET_ID = '1IEADNCoA30ggaO8l6pgXzJsjyjph0l2SU05U-jWxjvo'; 
+// 🔥 CATATAN: Definisi sheet log tujuan
+const LOG_SHEET_NAME_DEFAULT = 'Input Keramik'; 
+const LOG_SHEET_NAME_GM = 'Input GM'; 
+const CATEGORY_SHEETS = ['BESI', 'KERAMIK', 'LT 2', 'GM']; 
+
+// 🔥 SHEET BARU UNTUK DAFTAR USER
+const USER_SHEET_NAME = 'USER';
+
+// 🔥 Konfigurasi Cache Server: Durasi cache dalam detik. (Maks 6 jam/21600 detik)
+const CACHE_EXPIRATION_SECONDS = 21600; 
+// =================================================================
+
+/**
+ * 🔥 FUNGSI INTI UNTUK INSTANT REFRESH
+ * Dijalankan otomatis setiap ada perubahan (edit) di Spreadsheet.
+ * Sekarang juga membersihkan cache user jika ada perubahan di sheet USER.
+ */
+function onEdit(e) {
+  const range = e.range;
+  const sheetName = range.getSheet().getName();
+  
+  // Hanya proses jika perubahan terjadi di sheet data produk atau sheet USER
+  if (CATEGORY_SHEETS.includes(sheetName)) {
+    // 1. Bersihkan cache produk di server
+    clearProductCache();
+    // 2. Simpan waktu perubahan terbaru
+    setLatestTimestamp();
+    Logger.log(`Perubahan terdeteksi di sheet ${sheetName}. Cache dan Timestamp diperbarui.`);
+  } else if (sheetName === USER_SHEET_NAME) { // 🔥 LOGIKA BARU UNTUK CLEAR CACHE USER
+     CacheService.getScriptCache().remove('registeredUserList');
+     Logger.log(`Perubahan terdeteksi di sheet USER. Cache User dibersihkan.`);
+  }
+}
+
+/**
+ * Menyimpan waktu saat ini ke properti script (persistent storage).
+ */
+function setLatestTimestamp() {
+  const properties = PropertiesService.getScriptProperties();
+  const timestamp = new Date().getTime().toString();
+  properties.setProperty('latestProductChangeTimestamp', timestamp);
+}
+
+/**
+ * Mendapatkan waktu perubahan terbaru yang disimpan.
+ */
+function getLatestTimestamp() {
+  const properties = PropertiesService.getScriptProperties();
+  const timestamp = properties.getProperty('latestProductChangeTimestamp');
+  return timestamp ? parseInt(timestamp) : 0;
+}
+
+/**
+ * Membersihkan cache produk di server (Level 1 Cache).
+ */
+function clearProductCache() {
+  CacheService.getScriptCache().remove('allProductsData');
+}
+
+/**
+ * Menangani permintaan GET dari frontend.
+ */
+function doGet(e) {
+  let allProductData;
+  const cache = CacheService.getScriptCache();
+  const cachedData = cache.get('allProductsData');
+  const latestTimestamp = getLatestTimestamp(); // Ambil timestamp dari properti
+
+  // Jika front-end hanya ingin memeriksa timestamp
+  if (e && e.parameter && e.parameter.action === 'check') {
+      const timestampCheckResponse = {
+        status: 'ok',
+        latestTimestamp: latestTimestamp
+      };
+      return ContentService
+        .createTextOutput(JSON.stringify(timestampCheckResponse))
+        .setMimeType(ContentService.MimeType.JSON);
+  }
+  
+  // Jika front-end meminta data penuh
+  if (cachedData != null) {
+    Logger.log("Mengambil data dari CACHE.");
+    allProductData = JSON.parse(cachedData);
+  } else {
+    Logger.log("Mengambil data dari SPREADSHEET (lambat).");
+    allProductData = fetchAllProducts();
+    cache.put('allProductsData', JSON.stringify(allProductData), CACHE_EXPIRATION_SECONDS);
+  }
+  
+  const responseData = {
+    status: 'ok',
+    data: allProductData,
+    // 🔥 Sertakan timestamp terbaru di respons
+    latestTimestamp: latestTimestamp
+  };
+  
+  if (e && e.parameter && e.parameter.callback) { 
+    return ContentService
+      .createTextOutput(e.parameter.callback + '(' + JSON.stringify(responseData) + ')')
+      .setMimeType(ContentService.MimeType.JAVASCRIPT); 
+  }
+
+  return ContentService
+    .createTextOutput(JSON.stringify(responseData))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * 🔥 FUNGSI BARU: Memvalidasi nama user terhadap sheet 'USER' dengan caching.
+ */
+function validateUser(userName) {
+    if (!userName) return false;
+    const cache = CacheService.getScriptCache();
+    let cachedUserList = cache.get('registeredUserList');
+    let userList;
+
+    if (cachedUserList) {
+        // Jika data ada di cache, gunakan itu (FAST)
+        userList = JSON.parse(cachedUserList);
+        Logger.log("Mengambil daftar user dari CACHE (INSTAN).");
+    } else {
+        // Jika tidak ada di cache, ambil dari Sheet (SLOW, tapi hanya sekali per 6 jam)
+        Logger.log("Mengambil daftar user dari SPREADSHEET (SLOW).");
+        try {
+            const ss = SpreadsheetApp.openById(LOG_SPREADSHEET_ID);
+            const userSheet = ss.getSheetByName(USER_SHEET_NAME);
+
+            if (!userSheet) {
+                Logger.log(`Sheet user (${USER_SHEET_NAME}) tidak ditemukan.`);
+                return false;
+            }
+
+            const lastRow = userSheet.getLastRow();
+            if (lastRow < 1) return false;
+
+            // Ambil semua data di kolom A
+            const sheetValues = userSheet.getRange('A1:A' + lastRow).getValues();
+            
+            // Konversi ke array 1D UPPERCASE
+            userList = sheetValues
+                       .flat()
+                       .map(val => (val ? val.toString().trim().toUpperCase() : null))
+                       .filter(val => val !== null);
+
+            // Simpan hasil (userList) ke cache
+            cache.put('registeredUserList', JSON.stringify(userList), CACHE_EXPIRATION_SECONDS);
+
+        } catch (e) {
+            Logger.log("Error mengambil daftar user: " + e.message);
+            return false;
+        }
+    }
+
+    // Lakukan pencarian nama user di dalam userList yang sudah di-cache/diambil
+    return userList.includes(userName);
+}
+
+
+/**
+ * Menangani permintaan POST dari frontend (Form Submission / Login Validation).
+ */
+function doPost(e) {
+  const result = { status: 'error', error: 'Operasi gagal.' };
+  let parameters = e.parameter;
+  const action = parameters.action;
+
+  // =========================================================
+  // 🔥 CASE 1: VALIDASI LOGIN USER
+  // =========================================================
+  if (action === 'validateUser') {
+      const userName = parameters.userName ? parameters.userName.toString().trim().toUpperCase() : '';
+
+      if (validateUser(userName)) {
+          result.status = 'success';
+          result.error = undefined;
+      } else {
+          // Hanya kembalikan pesan gagal, detail pop-up ada di frontend
+          result.error = 'Nama user tidak terdaftar.'; 
+      }
+
+      return ContentService
+          .createTextOutput(JSON.stringify(result))
+          .setMimeType(ContentService.MimeType.JSON);
+  }
+  // =========================================================
+  // 🔥 CASE 2: LOGIKA LOG TRANSAKSI INVENTORY (Kode Lama)
+  // =========================================================
+  
+  try {
+    // MENGAMBIL PARAMETER SHEET TUJUAN YANG BARU KITA KIRIMKAN DARI FRONT-END
+    const targetSheetFromFrontend = parameters.targetSheet ? parameters.targetSheet.toString().trim() : '';
+    
+    const kategori = parameters.kategori ? parameters.kategori.toString().trim().toUpperCase() : '';
+    const jenisProduk = parameters.jenisProduk ? parameters.jenisProduk.toString().trim().toUpperCase() : '';
+    const namaBarang = parameters.namaBarang ? parameters.namaBarang.toString().trim().toUpperCase() : '';
+    const userChecker = parameters.checker ? parameters.checker.toString().trim().toUpperCase() : '';
+    const lokasi = parameters.lokasi ? parameters.lokasi.toString().trim().toUpperCase() : '';
+    const keterangan = parameters.formatSimpan ? parameters.formatSimpan.toString().trim().toUpperCase() : '';
+    const masukIn = parameters.masukIn ? parameters.masukIn.toString().trim() : '';
+    const keluarOut = parameters.keluarOut ? parameters.keluarOut.toString().trim() : '';
+    const currentTime = new Date();
+    
+    if (!lokasi || !kategori || !jenisProduk || !namaBarang || !userChecker || (!masukIn && !keluarOut)) {
+        throw new Error("Data input tidak lengkap (Pastikan Lokasi, Kategori, Produk, User terisi).");
+    }
+    
+    let action = '';
+    let amount = 0;
+    
+    if (masukIn) {
+      action = 'Masuk';
+      amount = parseInt(masukIn);
+    } else if (keluarOut) {
+      action = 'Keluar';
+      amount = parseInt(keluarOut);
+    }
+    
+    if (isNaN(amount) || amount <= 0) {
+      throw new Error("Jumlah barang tidak valid atau kurang dari 1.");
+    }
+    
+    let finalAmount = (action === 'Keluar') ? -amount : amount;
+
+    // 🔥 LOGIKA PENENTUAN TARGET SHEET (TIDAK BERUBAH DARI SEBELUMNYA)
+    let targetSheetName;
+    if (kategori === 'GM') {
+      targetSheetName = LOG_SHEET_NAME_GM; 
+    } else if (targetSheetFromFrontend) {
+      targetSheetName = targetSheetFromFrontend;
+    } else {
+      targetSheetName = LOG_SHEET_NAME_DEFAULT;
+    }
+    
+    if (!targetSheetName) {
+        throw new Error("Target sheet tidak ditemukan dalam data POST atau logika penentuan sheet.");
+    }
+
+    const targetSs = SpreadsheetApp.openById(LOG_SPREADSHEET_ID); 
+    const logSheet = targetSs.getSheetByName(targetSheetName); 
+    
+    if (!logSheet) {
+        throw new Error(`Sheet tujuan log (${targetSheetName}) tidak ditemukan di Spreadsheet ID: ${LOG_SPREADSHEET_ID}.`);
+    }
+    
+    // Array dengan panjang 9 (untuk kolom A-I)
+    const logEntry = new Array(9);
+    logEntry[0] = lokasi;          // Kolom A
+    logEntry[1] = namaBarang;      // Kolom B
+    logEntry[2] = finalAmount;     // Kolom C
+    logEntry[3] = userChecker;     // Kolom D
+    logEntry[4] = currentTime;     // Kolom E
+    logEntry[5] = keterangan;      // Kolom F
+    // logEntry[6] dan logEntry[7] akan diisi 'undefined'
+    logEntry[8] = jenisProduk;     // 🔥 Kolom I (Jenis Produk)
+    
+    logSheet.appendRow(logEntry);
+    
+    result.status = 'success';
+    result.error = undefined;
+    
+  } catch (error) {
+    Logger.log("doPost Error: " + error.message);
+    result.error = error.message;
+  }
+
+  return ContentService
+    .createTextOutput(JSON.stringify(result))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+
+function fetchAllProducts() {
+// ... (KODE fetchAllProducts TETAP SAMA) ...
+  try {
+    const ss = SpreadsheetApp.openById(LOG_SPREADSHEET_ID);
+    const data = {};
+
+    CATEGORY_SHEETS.forEach(sheetName => {
+      const sheet = ss.getSheetByName(sheetName);
+      if (!sheet) {
+        Logger.log(`Sheet not found in source spreadsheet: ${sheetName}`);
+        data[sheetName] = {};
+        return;
+      }
+      
+      const lastColumn = sheet.getLastColumn();
+      const lastRow = sheet.getLastRow();
+      
+      if (lastRow < 1 || lastColumn < 1) {
+        data[sheetName] = {};
+        return;
+      }
+      
+      const allValues = sheet.getRange(1, 1, lastRow, lastColumn).getValues();
+      const headers = allValues[0];
+      const categoryData = {};
+      
+      headers.forEach((header, colIndex) => {
+        const jenisProduk = header.toString().trim().toUpperCase();
+        
+        if (jenisProduk) {
+          const namaBarangList = [];
+          
+          for (let i = 1; i < allValues.length; i++) {
+            const namaBarang = allValues[i][colIndex];
+            if (namaBarang && namaBarang.toString().trim()) {
+              namaBarangList.push(namaBarang.toString().trim().toUpperCase());
+            }
+          }
+          
+          if (namaBarangList.length > 0) {
+            namaBarangList.sort(); 
+            categoryData[jenisProduk] = namaBarangList;
+          }
+        }
+      });
+      data[sheetName] = categoryData;
+    });
+
+    return data;
+    
+  } catch (e) {
+    Logger.log("Error in fetchAllProducts: " + e.message);
+    return {}; 
+  }
+}

@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pilih Transaksi - Depo Sumber Bangunan</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* Variabel CSS harus konsisten dengan index.html dan main.html */
+        :root {
+            --primary-color: #00897b; /* Hijau Primary */
+            --secondary-color: #ffb300; /* Kuning Secondary */
+            --background-color: #f0f4f8; /* Latar belakang cerah */
+            --card-background: #ffffff; /* Latar belakang card */
+            --text-color: #343a40; /* Teks gelap */
+            --border-radius: 12px;
+            --shadow-light: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        /* RESET DAN GLOBAL */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            transition: background-color 0.3s ease;
+        }
+
+        /* CARD TRANSAKSI */
+        .transaction-container {
+            width: 100%;
+            max-width: 500px;
+            background-color: var(--card-background);
+            padding: 30px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-light);
+            text-align: center;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .transaction-container h1 {
+            color: var(--primary-color);
+            margin-bottom: 5px;
+            font-weight: 700;
+            font-size: 2rem;
+        }
+        
+        .transaction-container .tagline {
+            color: var(--text-color);
+            margin-bottom: 30px;
+            font-weight: 400;
+            font-size: 1rem;
+        }
+
+        .transaction-container .user-info {
+            margin-bottom: 25px;
+            padding: 10px;
+            background-color: #e0f7fa; /* Warna ringan */
+            color: #00838f;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.9em;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .transaction-container .user-info strong {
+            color: var(--primary-color);
+            font-weight: 800;
+        }
+
+        /* TOMBOL LOGOUT KECIL */
+        #logoutButton {
+            background: none;
+            border: none;
+            color: #d32f2f; /* Merah */
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: color 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        #logoutButton:hover {
+            color: #b71c1c;
+        }
+
+        /* TOMBOL TRANSAKSI */
+        .button-group {
+            display: flex;
+            gap: 20px;
+            flex-direction: column; 
+            margin-top: 20px;
+        }
+
+        .btn-transaction {
+            padding: 20px 25px;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.2rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.1s, box-shadow 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            text-decoration: none; 
+        }
+
+        .btn-masuk {
+            background-color: var(--primary-color);
+            box-shadow: 0 8px 20px rgba(0, 137, 123, 0.4);
+        }
+
+        .btn-masuk:hover {
+            background-color: #00695c;
+        }
+
+        .btn-keluar {
+            background-color: var(--secondary-color);
+            color: var(--text-color);
+            box-shadow: 0 8px 20px rgba(255, 179, 0, 0.4);
+        }
+
+        .btn-keluar:hover {
+            background-color: #ffaa00;
+        }
+
+        .btn-transaction:active {
+            transform: translateY(2px);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        }
+        
+        /* FOOTER */
+        .footer-text {
+            margin-top: 30px;
+            font-size: 0.8rem;
+            color: var(--text-color);
+        }
+
+        /* RESPONSIVENESS */
+        @media (min-width: 600px) {
+            .button-group {
+                flex-direction: row; 
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="transaction-container">
+        <h1>Pilih Transaksi</h1>
+        <p class="tagline">Tentukan mode pencatatan Inventory Anda.</p>
+        
+        <div id="userInfo" class="user-info">
+            <span id="activeUserDisplay"></span>
+            <button id="logoutButton">
+                <i class="fas fa-sign-out-alt"></i> Logout
+            </button>
+        </div>
+
+        <div class="button-group">
+            <a href="main.html?mode=Masuk" class="btn-transaction btn-masuk" data-mode="Masuk">
+                <i class="fas fa-sign-in-alt"></i> BARANG MASUK
+            </a>
+            <a href="main.html?mode=Keluar" class="btn-transaction btn-keluar" data-mode="Keluar">
+                <i class="fas fa-sign-out-alt"></i> BARANG KELUAR
+            </a>
+        </div>
+
+        <p class="footer-text">Inventory App &copy; Depo Sumber Bangunan</p>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const activeUserDisplay = document.getElementById('activeUserDisplay');
+            const logoutButton = document.getElementById('logoutButton');
+            const transactionButtons = document.querySelectorAll('.btn-transaction');
+            const loginPageUrl = 'index.html';
+
+            // 1. Cek User Login (Otentikasi Sederhana)
+            const activeUser = localStorage.getItem('activeUser');
+
+            if (!activeUser) {
+                // Jika tidak ada user, arahkan kembali ke halaman login
+                alert('Anda harus login terlebih dahulu!');
+                window.location.href = loginPageUrl;
+                return;
+            }
+
+            // Tampilkan informasi user
+            activeUserDisplay.innerHTML = `Selamat Datang, <strong>${activeUser}</strong>`;
+
+            // 2. LOGIKA LOGOUT
+            logoutButton.addEventListener('click', () => {
+                if (confirm('Anda yakin ingin keluar dan mengganti user?')) {
+                    localStorage.removeItem('activeUser');
+                    // Hapus juga mode transaksi sebelumnya jika ada
+                    localStorage.removeItem('transactionMode');
+                    window.location.href = loginPageUrl;
+                }
+            });
+
+            // 3. LOGIKA MEMILIH TRANSAKSI
+            transactionButtons.forEach(button => {
+                button.addEventListener('click', (e) => {
+                    // Ambil mode dari atribut data-mode
+                    const mode = e.currentTarget.getAttribute('data-mode');
+                    
+                    // Simpan mode transaksi ke Local Storage sebelum navigasi
+                    localStorage.setItem('transactionMode', mode);
+                    
+                    // Navigasi ke main.html akan dilakukan oleh `href` dari tag <a>
+                });
+            });
+
+        });
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <link rel="manifest" href="/manifest.json">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login User - Inventory</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #00897b; /* Hijau Primary */
+            --secondary-color: #ffb300; /* Kuning Secondary */
+            --background-color: #f0f4f8; /* Latar belakang cerah */
+            --card-background: #ffffff; /* Latar belakang card */
+            --text-color: #343a40; /* Teks gelap */
+            --border-radius: 12px;
+            --shadow-light: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        /* RESET DAN GLOBAL */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            transition: background-color 0.3s ease;
+        }
+
+        /* CARD LOGIN */
+        .login-container {
+            width: 100%;
+            max-width: 400px;
+            background-color: var(--card-background);
+            padding: 30px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-light);
+            text-align: center;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .login-container h1 {
+            color: var(--primary-color);
+            margin-bottom: 5px;
+            font-weight: 700;
+            font-size: 1.8rem;
+        }
+        
+        .login-container .tagline {
+            color: var(--secondary-color);
+            margin-bottom: 25px;
+            font-weight: 400;
+            font-size: 0.9rem;
+        }
+
+
+        /* INPUT GROUP */
+        .input-group {
+            margin-bottom: 25px;
+            text-align: left;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--primary-color);
+        }
+
+        .input-group input[type="text"] {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ced4da;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s, box-shadow 0.3s;
+            text-transform: uppercase; /* Agar konsisten dengan app utama */
+        }
+
+        .input-group input[type="text"]:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(0, 137, 123, 0.25);
+            outline: none;
+        }
+
+        /* BUTTON */
+        .btn-masuk {
+            width: 100%;
+            padding: 14px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.1s;
+            box-shadow: 0 5px 15px rgba(0, 137, 123, 0.4);
+        }
+
+        .btn-masuk:hover {
+            background-color: #00695c;
+        }
+
+        .btn-masuk:active {
+            transform: translateY(1px);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+        }
+
+        /* FOOTER */
+        .footer-text {
+            margin-top: 30px;
+            font-size: 0.8rem;
+            color: var(--text-color);
+        }
+
+        /* RESPONSIVENESS */
+        @media (max-width: 500px) {
+            .login-container {
+                padding: 25px 20px;
+            }
+
+            .login-container h1 {
+                font-size: 1.6rem;
+            }
+
+            .input-group input[type="text"],
+            .btn-masuk {
+                padding: 12px;
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="login-container">
+        <h1>DEPO SUMBER BANGUNAN</h1>
+        <p class="tagline">Aplikasi Pencatatan Inventory</p>
+        
+        <form id="loginForm" action="pilih_transaksi.html">
+            <div class="input-group">
+                <label for="userName">Nama User</label>
+                <input type="text" id="userName" placeholder="Masukan Nama" required>
+            </div>
+            
+            <button type="submit" class="btn-masuk" id="masukButton">MASUK 🚀</button>
+        </form>
+
+        <p class="footer-text"> &copy; Depo Sumber Bangunan</p>
+    </div>
+
+    <script>
+        // PASTIKAN SCRIPT_URL INI ADALAH URL DEPLOYMENT APPS SCRIPT ANDA
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxw62_gcJRYru1WLasGuePWc4W2qIcgU8krRMUjw9IUVioKGibQIrdi174jiw7JfU2Z/exec';
+        const HOME_PAGE_URL = 'pilih_transaksi.html';
+        const CEK_STOCK_URL = 'cek-stok.html'; // URL untuk user 'TOKO'
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const userNameInput = document.getElementById('userName');
+            const loginForm = document.getElementById('loginForm');
+            const masukButton = document.getElementById('masukButton');
+            
+            // 🔥 START: LOGIKA AUTO-REDIRECT (NON-LOGOUT) 🔥
+            const storedUser = localStorage.getItem('activeUser');
+            if (storedUser) {
+                // Jika user adalah 'TOKO', arahkan ke cek-stok.html
+                if (storedUser === 'TOKO') {
+                    window.location.href = CEK_STOCK_URL;
+                } else {
+                    // User normal, arahkan ke halaman utama transaksi
+                    window.location.href = HOME_PAGE_URL;
+                }
+                return; // Hentikan eksekusi script selanjutnya
+            }
+            // 🔥 END: LOGIKA AUTO-REDIRECT (NON-LOGOUT) 🔥
+            
+            userNameInput.focus();
+
+            loginForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const userName = userNameInput.value.trim().toUpperCase();
+
+                if (!userName) {
+                    alert('Nama User tidak boleh kosong!');
+                    return;
+                }
+
+                masukButton.disabled = true;
+                masukButton.textContent = 'Memvalidasi...';
+                
+                // === START: LOGIKA KHUSUS USER 'TOKO' ===
+                if (userName === 'TOKO') {
+                    // Langsung simpan dan arahkan tanpa validasi Apps Script
+                    localStorage.setItem('activeUser', 'TOKO');
+                    window.location.href = CEK_STOCK_URL;
+                    return;
+                }
+                // === END: LOGIKA KHUSUS USER 'TOKO' ===
+
+                // === LOGIKA VALIDASI NORMAL (Pengguna selain 'TOKO') ===
+                try {
+                    const urlEncodedData = 'action=validateUser&userName=' + encodeURIComponent(userName);
+                    
+                    const response = await fetch(SCRIPT_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: urlEncodedData,
+                    });
+
+                    const result = await response.json();
+
+                    if (result.status === 'success') {
+                        // 1. Simpan Nama User ke Local Storage
+                        localStorage.setItem('activeUser', userName);
+
+                        // 2. Arahkan ke halaman utama
+                        window.location.href = HOME_PAGE_URL;
+                    } else {
+                        // Pop-up Penolakan
+                        const message = `❌ **${userName}**, anda Belum Terdaftar. Konfirmasi DSM gudang untuk di daftarkan.`;
+                        alert(message);
+                        console.error('Login Gagal:', result.error); 
+                    }
+
+                } catch (error) {
+                    console.error('Login Error (Jaringan):', error);
+                    alert('❌ Terjadi kesalahan jaringan saat validasi user. Coba lagi.');
+                } finally {
+                    masukButton.disabled = false;
+                    masukButton.textContent = 'MASUK 🚀';
+                }
+                // === END LOGIKA VALIDASI NORMAL ===
+
+            });
+        });
+        
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/sw.js').then(function(registration) {
+                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                }, function(err) {
+                    console.log('ServiceWorker registration failed: ', err);
+                });
+            });
+        }
+    </script>
+
+</body>
+</html>
