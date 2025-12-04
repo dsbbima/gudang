@@ -556,9 +556,7 @@
       "STP/ HOLO PLAFON B 35X38 (0.25)",
       "DEL/ HOLO PLESTER"
     ]
-  },
-  "CEMENT & PEREKAT": {
-    "CEMENT & PEREKAT": [
+  "CEMENT & PEREKAT": [
       "SB ACIAN BATA RINGAN 30 KG",
       "SB PEREKAT BATA RINGAN 40 KG",
       "SB PLESTER BATA RINGAN 40 KG",
@@ -576,8 +574,7 @@
       "STP/ SEMEN GRESIK 50 KG",
       "STP/ SEMEN HOLCIM 50 KG",
       "STP/ SEMEN SINGA MERAH 50 KG"
-    ]
-  },
+    ],
   "GM": {
     "PLAT": [
       "PLATMESH METAL C1015 (2 X 1.2 X 2.4) 5",
