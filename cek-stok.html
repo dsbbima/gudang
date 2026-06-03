@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CEK STOCK GUDANG</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* Mengunci halaman utama agar stabil */
+        html, body { 
+            height: 100%; 
+            margin: 0; 
+            padding: 0; 
+            overflow: hidden; 
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+            background-color: #f4f7f9; 
+        }
+
+        /* Container responsif */
+        .container { 
+            display: flex; 
+            flex-direction: column; 
+            height: 100vh; 
+            max-width: 1000px; 
+            margin: auto; 
+            background: white; 
+            padding: 8px; 
+            box-sizing: border-box; 
+            position: relative; /* Penting untuk posisi burger */
+        }
+
+        /* CSS MENU BURGER (Disalin dari context main_keluar & disesuaikan) */
+        .burger-container {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            z-index: 1000;
+        }
+
+        .burger-menu {
+            font-size: 24px;
+            cursor: pointer;
+            color: #007bff;
+        }
+
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            top: 30px;
+            right: 0;
+            background: white;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            border-radius: 8px;
+            min-width: 180px;
+            overflow: hidden;
+            z-index: 1001;
+        }
+
+        .dropdown-menu.show {
+            display: block;
+        }
+
+        .dropdown-menu a {
+            display: block;
+            padding: 12px 15px;
+            text-decoration: none;
+            color: #333;
+            font-size: 14px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .dropdown-menu a:hover {
+            background-color: #f8f9fa;
+        }
+
+        .dropdown-menu i {
+            margin-right: 10px;
+            width: 20px;
+            text-align: center;
+        }
+
+        h2 { 
+            color: #007bff; 
+            text-align: center; 
+            margin: 10px 0; 
+            font-size: 18px; 
+            letter-spacing: 1px;
+        }
+
+        .search-box {
+            padding: 0 5px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        input { 
+            width: 100%; 
+            padding: 12px; 
+            margin-bottom: 10px; 
+            border: 2px solid #007bff; 
+            border-radius: 8px; 
+            box-sizing: border-box; 
+            font-size: 14px; 
+            outline: none;
+            transition: 0.3s;
+        }
+
+        /* Area Scroll Tabel */
+        .table-container { 
+            flex: 1; 
+            overflow-y: auto; 
+            overflow-x: hidden; 
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            background: #fff;
+        }
+
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            table-layout: fixed; 
+        }
+
+        th { 
+            background-color: #007bff; 
+            color: white; 
+            padding: 10px 4px; 
+            text-align: left; 
+            font-weight: 600; 
+            font-size: 11px; 
+            position: sticky; 
+            top: 0; 
+            z-index: 10;
+            text-transform: uppercase;
+        }
+
+        td { 
+            padding: 10px 4px; 
+            border-bottom: 1px solid #f0f0f0; 
+            color: #333; 
+            font-size: 11px; 
+            word-wrap: break-word;
+            vertical-align: middle;
+        }
+
+        /* Pengaturan Lebar Kolom */
+        th:nth-child(1), td:nth-child(1) { width: 55%; } 
+        th:nth-child(2), td:nth-child(2) { width: 15%; text-align: center; } 
+        th:nth-child(3), td:nth-child(3) { width: 18%; text-align: center; } 
+        th:nth-child(4), td:nth-child(4) { width: 12%; text-align: center; } 
+
+        tr:nth-child(even) { background-color: #fafafa; }
+        tr:active { background-color: #e3f2fd; } 
+
+        .error-msg { 
+            background: #fff1f0; 
+            color: #cf1322; 
+            padding: 10px; 
+            border-radius: 5px; 
+            font-size: 11px; 
+            text-align: center; 
+        }
+
+        .loading { text-align: center; color: #007bff; padding: 20px; font-size: 12px; font-weight: bold; }
+
+        @media (min-width: 768px) {
+            th, td { font-size: 14px; padding: 12px 8px; }
+            h2 { font-size: 24px; }
+            input { font-size: 16px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="burger-container">
+        <i class="fas fa-bars burger-menu" onclick="toggleMenu()"></i>
+        <div id="menuOverlay" class="dropdown-menu">
+            <a href="main_masuk.html"><i class="fas fa-download"></i> Masuk</a>
+            <a href="main_keluar.html"><i class="fas fa-upload"></i> Keluar</a>
+            <a href="main_pindah.html"><i class="fas fa-exchange-alt"></i> Pindah Lokasi</a>
+            <a href="cek-stok.html"><i class="fas fa-box"></i> Cek Stok</a>
+        </div>
+    </div>
+
+    <h2>🔍 STOCK GUDANG</h2>
+    
+    <div class="search-box">
+        <input type="text" id="searchInput" placeholder="Cari Nama Barang..." onkeyup="filterData()">
+        <input type="text" id="searchLocation" placeholder="Cari Lokasi..." onkeyup="filterData()">
+    </div>
+    
+    <div class="table-container">
+        <table id="stockTable">
+            <thead>
+                <tr>
+                    <th>NAMA PRODUK</th>
+                    <th>LOK</th>
+                    <th>SITE GUDANG</th>
+                    <th>QTY</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                <tr><td colspan="4" class="loading">Sinkronisasi Data...</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <div id="errorMessage" class="error-msg" style="display:none;"></div>
+</div>
+
+<script>
+    // FUNGSI TOGGLE MENU BURGER
+    function toggleMenu() {
+        const menu = document.getElementById('menuOverlay');
+        menu.classList.toggle('show');
+    }
+
+    // Klik di luar menu untuk menutup
+    window.onclick = function(event) {
+        if (!event.target.matches('.burger-menu')) {
+            const dropdowns = document.getElementsByClassName("dropdown-menu");
+            for (let i = 0; i < dropdowns.length; i++) {
+                const openDropdown = dropdowns[i];
+                if (openDropdown.classList.contains('show')) {
+                    openDropdown.classList.remove('show');
+                }
+            }
+        }
+    }
+
+    let allData = [];
+    const SPREADSHEET_ID = '1IEADNCoA30ggaO8l6pgXzJsjyjph0l2SU05U-jWxjvo'.trim(); 
+    const SHEET_NAME = 'CEK STOCK';
+    const URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(SHEET_NAME)}`;
+
+    async function fetchData() {
+        try {
+            const response = await fetch(URL);
+            if (!response.ok) throw new Error("Koneksi gagal.");
+            
+            const text = await response.text();
+            const jsonText = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
+            const json = JSON.parse(jsonText);
+            
+            allData = json.table.rows
+                .map(row => {
+                    return row.c.map(cell => {
+                        if (!cell || cell.v === null || cell.v === undefined) return "";
+                        return cell.v;
+                    });
+                })
+                .filter(row => {
+                    const qty = parseFloat(row[3]);
+                    return isNaN(qty) || qty >= 0;
+                });
+            
+            displayData(allData);
+            document.getElementById('errorMessage').style.display = 'none';
+        } catch (error) {
+            console.error("Fetch Error:", error);
+            const errDiv = document.getElementById('errorMessage');
+            errDiv.style.display = 'block';
+            errDiv.innerHTML = `Terjadi kesalahan saat memuat data.`;
+        }
+    }
+
+    function displayData(data) {
+        const tableBody = document.getElementById('tableBody');
+        tableBody.innerHTML = "";
+        
+        if (data.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 20px;">Data tidak ditemukan</td></tr>';
+            return;
+        }
+
+        data.forEach(row => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td style="font-weight: 500;">${row[0] || '-'}</td>
+                <td style="text-align:center;">${row[1] || '-'}</td>
+                <td style="text-align:center;">${row[2] || '-'}</td>
+                <td style="text-align:center; font-weight: bold; color: #007bff;">${row[3] !== "" ? row[3] : '0'}</td>
+            `;
+            tableBody.appendChild(tr);
+        });
+    }
+
+    function filterData() {
+        const nameQuery = document.getElementById('searchInput').value.toLowerCase();
+        const locQuery = document.getElementById('searchLocation').value.toLowerCase();
+        
+        const filtered = allData.filter(row => {
+            const nameVal = row[0] ? row[0].toString().toLowerCase() : "";
+            const locVal = row[1] ? row[1].toString().toLowerCase() : "";
+            
+            return nameVal.includes(nameQuery) && locVal.includes(locQuery);
+        });
+        displayData(filtered);
+    }
+
+    fetchData();
+</script>
+
+</body>
+</html>

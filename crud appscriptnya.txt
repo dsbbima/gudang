@@ -1,0 +1,118 @@
+/**
+ * Google Apps Script - Inventory System Expert (Fix CORS & Server 500)
+ * Spreadsheet ID: 1Cijliqxv3AuZ7L9nYAWfihNgykGW57zwTFoOh0laekQ
+ */
+
+const SS_ID = "1IEADNCoA30ggaO8l6pgXzJsjyjph0l2SU05U-jWxjvo";
+
+function doGet(e) {
+  const action = e.parameter.action;
+  const ss = SpreadsheetApp.openById(SS_ID);
+  let result;
+
+  try {
+    if (action === "validateUser") {
+      const userName = e.parameter.userName;
+      const sheet = ss.getSheetByName("User");
+      const data = sheet.getRange("A2:A" + sheet.getLastRow()).getValues();
+      const userExists = data.flat().some(user => user.toString().trim().toUpperCase() === userName.toUpperCase());
+      result = { status: userExists ? "success" : "error" };
+    } 
+    else if (action === "getDb") {
+      const sheet = ss.getSheetByName("Data Base Inputan");
+      const data = sheet.getDataRange().getValues();
+      data.shift(); 
+      const filtered = data.map(r => ({
+        barcode: r[0], nama: r[1], kategori: r[2], jenis: r[3], divisi: r[4]
+      })).filter(item => item.nama && !item.nama.toString().toUpperCase().includes("DEL/"));
+      result = filtered;
+    }
+    else if (action === "getUsers") {
+      const sheet = ss.getSheetByName("User");
+      result = sheet.getRange("A2:A" + sheet.getLastRow()).getValues().flat();
+    }
+  } catch (err) {
+    result = { status: "error", message: err.toString() };
+  }
+
+  return ContentService.createTextOutput(JSON.stringify(result))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function doPost(e) {
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(30000);
+    const contents = JSON.parse(e.postData.contents);
+    const ss = SpreadsheetApp.openById(SS_ID);
+    const timestamp = Utilities.formatDate(new Date(), "GMT+8", "dd-MMM-yyyy HH:mm:ss");
+
+    // LOGIKA BARU: CRUD UNTUK DASHBOARD
+    if (contents.action && (contents.action === "add" || contents.action === "edit" || contents.action === "delete")) {
+      const sheet = ss.getSheets().find(s => s.getSheetId() == contents.gid);
+      if (!sheet) throw new Error("Sheet dengan GID " + contents.gid + " tidak ditemukan.");
+
+      if (contents.action === "add") {
+        sheet.appendRow(contents.rowData);
+        return ContentService.createTextOutput("Success Add").setMimeType(ContentService.MimeType.TEXT);
+      } 
+      else if (contents.action === "edit") {
+        sheet.getRange(contents.rowIndex + 1, 1, 1, contents.rowData.length).setValues([contents.rowData]);
+        return ContentService.createTextOutput("Success Edit").setMimeType(ContentService.MimeType.TEXT);
+      } 
+      else if (contents.action === "delete") {
+        sheet.deleteRow(contents.rowIndex + 1);
+        return ContentService.createTextOutput("Success Delete").setMimeType(ContentService.MimeType.TEXT);
+      }
+    }
+
+    // LOGIKA LAMA: BATCH INPUT DARI TRANSAKSI
+    const batches = {};
+
+    contents.items.forEach(item => {
+      const cat = item.category.toUpperCase();
+      let sName = (cat === "BESI") ? "Input Besi" : 
+                  (cat === "LT 2" || cat === "LT2") ? "Input LT2" : 
+                  (cat === "GM") ? "Input GM" : 
+                  (cat === "KERAMIK") ? "Input Keramik" : "";
+
+      if (!sName) return;
+      if (!batches[sName]) batches[sName] = { part1: [], part2: [] };
+
+      // Membagi data menjadi dua bagian untuk melewati Kolom G & H
+      if (sName === "Input Keramik") {
+        // Part 1: Kolom B sampai F (5 kolom)
+        batches[sName].part1.push([item.namaBarang, item.qty, item.user, timestamp, item.keterangan]);
+        // Part 2: Kolom I sampai J (2 kolom)
+        batches[sName].part2.push([item.jenis, item.lokasi]);
+      } else {
+        // Part 1: Kolom A sampai F (6 kolom)
+        batches[sName].part1.push([item.lokasi, item.namaBarang, item.qty, item.user, timestamp, item.keterangan]);
+        // Part 2: Kolom I (1 kolom)
+        batches[sName].part2.push([item.jenis]);
+      }
+    });
+
+    for (let sName in batches) {
+      const targetSheet = ss.getSheetByName(sName);
+      if (targetSheet) {
+        const nextRow = targetSheet.getLastRow() + 1;
+        const startCol = (sName === "Input Keramik") ? 2 : 1;
+        
+        // Simpan Part 1 (Kolom A/B sampai F)
+        targetSheet.getRange(nextRow, startCol, batches[sName].part1.length, batches[sName].part1[0].length)
+                   .setValues(batches[sName].part1);
+        
+        // Simpan Part 2 (Mulai Kolom I / Kolom ke-9)
+        // Kolom G (7) dan H (8) akan terlewati dan tetap kosong (atau diisi rumus)
+        targetSheet.getRange(nextRow, 9, batches[sName].part2.length, batches[sName].part2[0].length)
+                   .setValues(batches[sName].part2);
+      }
+    }
+    return ContentService.createTextOutput(JSON.stringify({ "status": "success" })).setMimeType(ContentService.MimeType.JSON);
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({ "status": "error", "message": error.toString() })).setMimeType(ContentService.MimeType.JSON);
+  } finally {
+    lock.releaseLock();
+  }
+}

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventory - Barang Keluar</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="mode-keluar">
+    <div class="container">
+<div class="burger-container">
+    <div class="burger-menu" onclick="toggleMenu()">☰</div>
+    <div id="dropdownMenu" class="dropdown-menu">
+        <a href="pilih_transaksi.html">🏠 MENU UTAMA</a>
+        <a href="dashboard.html" id="menuDashboard" style="display:none;">📊 DASHBOARD</a>
+        <a href="main_masuk.html">📥 BARANG MASUK</a>
+        <a href="main_keluar.html">📤 BARANG KELUAR</a>
+        <a href="main_pindah.html">🔄 PINDAH LOKASI</a>
+        <a href="cek-stok.html">🔎 CEK STOCK</a>
+      
+    </div>
+</div>
+        <div class="app-title">
+            <i class="fas fa-sync-alt btn-update-data" onclick="manualRefresh()"></i>
+            <img id="appLogo" src="depo.png">
+            <div class="mode-status" style="color:var(--danger-color)">BARANG KELUAR</div>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; font-size:0.6rem; margin-bottom:5px;">
+            <span>USER: <strong id="displayUser">...</strong></span>
+            <span onclick="logout()" style="color:red; cursor:pointer; font-weight:bold">LOGOUT</span>
+        </div>
+
+        <div class="input-group">
+            <label>MAU INPUT BERAPA ITEM?</label>
+            <div style="display:flex; gap:5px;">
+                <input type="number" id="itemCount" value="1" min="1">
+                <button type="button" onclick="generateFields()" style="background:var(--primary-color); color:white; border:none; padding:0 15px; border-radius:4px; font-size:0.7rem;">SET</button>
+            </div>
+        </div>
+
+        <form id="inventoryForm">
+            <div id="multiItemContainer"></div>
+            <button type="submit" class="submit-btn" style="background:var(--danger-color)">SIMPAN BARANG KELUAR</button>
+        </form>
+
+        <div style="margin-top: 30px;">
+    <h3 style="font-size: 14px; color: #00897b; border-bottom: 2px solid #00897b; padding-bottom: 5px; margin-bottom: 15px;">RIWAYAT ANDA HARI INI</h3>
+    <div id="historyList">
+        </div>
+</div>
+<div id="toast"></div>
+
+    <script>
+        document.write('<script src="script.js?v=' + new Date().getTime() + '"><\/script>');
+    </script>
+</body>
+</html>

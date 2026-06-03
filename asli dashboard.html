@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Dashboard Stock Fisik Gudang</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+        
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #f8fafc; font-size: 11px; color: #334155; margin: 0; overflow: hidden; height: 100vh; }
+
+        .fixed-header-section { position: sticky; top: 0; z-index: 100; background: white; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+
+        .nav-tab { padding: 8px 14px; border-radius: 8px; font-weight: 700; transition: all 0.2s; border: 1px solid #e2e8f0; background: #fff; color: #64748b; white-space: nowrap; }
+        .nav-tab.active { background: #2563eb; color: #fff !important; border-color: #2563eb; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2); }
+
+        .scroll-container { display: flex; overflow-x: auto; gap: 8px; padding: 10px 15px; -webkit-overflow-scrolling: touch; }
+        .scroll-container::-webkit-scrollbar { display: none; }
+
+        .sub-nav-btn { padding: 6px 12px; border-radius: 6px; font-size: 10px; font-weight: 600; background: #f1f5f9; border: 1px solid #cbd5e1; white-space: nowrap; }
+        .sub-nav-btn.active { background: #0f172a; color: white; border-color: #0f172a; }
+
+        .table-wrapper { 
+            height: calc(100vh - 215px); 
+            overflow: auto; 
+            background: white; 
+            margin: 10px 10px 0 10px; 
+            border-radius: 12px 12px 0 0; 
+            border: 1px solid #e2e8f0;
+            padding-bottom: 40px; 
+        }
+
+        table { border-collapse: separate; border-spacing: 0; width: 100%; }
+        thead th { position: sticky; top: 0; z-index: 50; background: #f1f5f9; padding: 10px 12px; text-align: left; font-weight: 800; border-bottom: 2px solid #e2e8f0; white-space: nowrap; }
+        .col-filter { width: 100%; margin-top: 5px; padding: 6px; font-size: 10px; border: 1px solid #cbd5e1; border-radius: 4px; outline: none; font-weight: 400; }
+        
+        tbody td { padding: 8px 12px; border-bottom: 1px solid #f1f5f9; white-space: nowrap; }
+        .text-minus { color: #ef4444 !important; font-weight: 800; }
+        
+        tr:hover td { background-color: #f0f7ff; }
+
+        footer { 
+            position: fixed; bottom: 0; left: 0; right: 0; height: 35px; 
+            background: white; border-top: 1px solid #e2e8f0; 
+            display: flex; align-items: center; padding: 0 15px; 
+            font-weight: 800; color: #64748b; z-index: 110;
+        }
+
+        @media print {
+            .fixed-header-section, footer, .col-filter { display: none !important; }
+            .table-wrapper { height: auto !important; overflow: visible !important; margin: 0 !important; border: none !important; }
+            body { overflow: visible !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="fixed-header-section">
+        <header class="px-4 py-3 border-b flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <a href="pilih_transaksi.html" class="bg-slate-100 hover:bg-slate-200 p-1.5 rounded-lg mr-1" title="Kembali ke Transaksi">
+                    <i class="fa fa-arrow-left text-slate-600 text-xs"></i>
+                </a>
+                <div class="bg-blue-600 p-1.5 rounded-lg"><i class="fa fa-database text-white text-xs"></i></div>
+                <h1 class="text-sm font-bold tracking-tighter">STOCK <span class="text-blue-600">GUDANG</span></h1>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="exportToExcel()" class="bg-emerald-600 text-white px-3 py-1.5 rounded text-[10px] font-bold uppercase"><i class="fa fa-file-excel mr-1"></i> Excel</button>
+                <button onclick="window.print()" class="bg-slate-700 text-white px-3 py-1.5 rounded text-[10px] font-bold uppercase"><i class="fa fa-print mr-1"></i> Print</button>
+                <div id="syncStatus" class="ml-2 self-center text-[9px] uppercase font-bold text-slate-400">Ready</div>
+            </div>
+        </header>
+        <div class="scroll-container bg-slate-50 border-b" id="mainTabContainer"></div>
+        <div id="subCategoryArea" class="scroll-container hidden border-b"></div>
+    </div>
+
+    <main>
+        <div class="table-wrapper shadow-sm custom-scrollbar">
+            <table id="mainTable">
+                <thead><tr id="tableHead"></tr></thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+        </div>
+    </main>
+
+    <footer>
+        <div class="flex justify-between w-full items-center">
+            <span id="rowCount">ROWS: 0</span>
+            <span class="text-blue-600">Ayiipp v9.0 </span>
+        </div>
+    </footer>
+
+    <script>
+        // Proteksi Halaman Dashboard (Hanya IRA dan ARIF)
+        const activeUser = localStorage.getItem('activeUser');
+        const allowedUsers = ['IRA', 'ARIF','IWAN'];
+        if (!activeUser || !allowedUsers.includes(activeUser.toUpperCase())) {
+            alert("Akses Ditolak! Halaman ini hanya untuk Admin.");
+            window.location.href = "pilih_transaksi.html";
+        }
+
+        const SS_ID = '1IEADNCoA30ggaO8l6pgXzJsjyjph0l2SU05U-jWxjvo';
+        
+        const MAP_7_COL = ["Nama Produk", "Barcode", "Lokasi", "Qty Gudang", "Affary", "Selisih", "Status"];
+        const MAP_INPUT = ["Lokasi", "Nama produk", "Qty", "User", "Timestamp", "Keterangan", "Barcode", "Divisi", "Jenis"];
+        const MAP_LT2 = ["Nama Produk", "Barcode", "Qty Gudang", "Affary", "Selisih", "Status"];
+
+        const SHEETS = [
+            { name: "ALL", gid: null, type: "all_menu" },
+            { name: "Fencing G5000", gid: "2045042023", type: "special_fencing" },
+            { name: "Input Besi", gid: "757014770", type: "input" },
+            { name: "Keramik", gid: "663730895", type: "keramik" },
+            { name: "Input Keramik", gid: "41989072", type: "input" },
+            { name: "LT2", gid: "2014923600", type: "special_lt2" },
+            { name: "Input LT2", gid: "1236205506", type: "input" },
+            { name: "GM", gid: "1492034154", type: "special_gm" },
+            { name: "Input GM", gid: "1926615453", type: "input" }
+        ];
+
+        const SUB_CATS = {
+            "all_menu": [
+                {n: "KERAMIK", gid: "663730895", type: "keramik", r: null},
+                {n: "BESI", gid: "2045042023", type: "special_fencing", r: null},
+                {n: "LT 2", gid: "2014923600", type: "special_lt2", r: null},
+                {n: "GM", gid: "1492034154", type: "special_gm", r: null}
+            ],
+            "special_fencing": [
+                {n: "PIPA GALV KOTA", r: [0,6]}, {n: "PIPA AIR", r: [11,17]}, {n: "PIPA GALV SPINDO", r: [22,28]},
+                {n: "PIPA KOTA", r: [33,39]}, {n: "KANAL", r: [44,50]}, {n: "PLAT", r: [55,61]},
+                {n: "SIKU", r: [66,72]}, {n: "VIRKAN", r: [77,83]}, {n: "STRIP", r: [88,94]},
+                {n: "PIPA GAS", r: [99,105]}, {n: "BESI", r: [110,116]}
+            ],
+            "special_lt2": [
+                {n: "APPLIANCES", r: [0,5]}, {n: "PINTU", r: [10,15]}, {n: "ELECTRIKAL", r: [20,25]},
+                {n: "PLUMBING", r: [30,35]}, {n: "SANITARY", r: [40,45]}, {n: "PAINT", r: [50,55]},
+                {n: "GLASS BLOCK", r: [60,65]}, {n: "TRISENSA", r: [70,75]}, {n: "TOOLS", r: [80,85]}
+            ],
+            "special_gm": [
+                {n: "PIPA GALV KOTA", r: [0,6]}, {n: "PIPA AIR", r: [11,17]}, {n: "PIPA GALV SPINDO", r: [22,28]},
+                {n: "PIPA KOTAK", r: [33,39]}, {n: "KANAL", r: [44,50]}, {n: "PLAT", r: [55,61]},
+                {n: "SIKU", r: [66,72]}, {n: "VIRKAN", r: [77,83]}, {n: "STRIP", r: [88,94]},
+                {n: "PIPA GAS", r: [99,105]}, {n: "BESI", r: [110,116]}, {n: "PIPA SS", r: [121,127]}
+            ]
+        };
+
+        let rawData = [];
+        let filteredData = [];
+        let activeRange = null; 
+        let currentType = "";
+        let currentHeaders = [];
+        let isVerticalMode = false;
+
+        function init() {
+            const container = document.getElementById('mainTabContainer');
+            SHEETS.forEach((s, i) => {
+                const btn = document.createElement('button');
+                btn.className = `nav-tab ${i === 0 ? 'active' : ''}`;
+                btn.innerText = s.name;
+                btn.onclick = () => {
+                    document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    switchSheet(s);
+                };
+                container.appendChild(btn);
+            });
+            switchSheet(SHEETS[0]);
+        }
+
+        function switchSheet(sheet) {
+            const subArea = document.getElementById('subCategoryArea');
+            subArea.innerHTML = '';
+            currentType = sheet.type;
+            isVerticalMode = (currentType.includes('fencing') || currentType.includes('lt2') || currentType.includes('gm'));
+
+            if (SUB_CATS[sheet.type]) {
+                subArea.classList.remove('hidden');
+                SUB_CATS[sheet.type].forEach((cat, idx) => {
+                    const btn = document.createElement('button');
+                    btn.className = `sub-nav-btn ${idx === 0 ? 'active' : ''}`;
+                    btn.innerText = cat.n;
+                    btn.onclick = () => {
+                        document.querySelectorAll('.sub-nav-btn').forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        activeRange = cat.r;
+                        if(sheet.type === 'all_menu') {
+                            currentType = cat.type;
+                            isVerticalMode = true;
+                            loadData(cat.gid);
+                        } else {
+                            applyFilters();
+                        }
+                    };
+                    subArea.appendChild(btn);
+                });
+                
+                if(sheet.type === 'all_menu') {
+                    const defaultCat = SUB_CATS[sheet.type][0];
+                    currentType = defaultCat.type;
+                    activeRange = null; 
+                    loadData(defaultCat.gid);
+                } else {
+                    activeRange = SUB_CATS[sheet.type][0].r;
+                    loadData(sheet.gid);
+                }
+            } else { 
+                subArea.classList.add('hidden');
+                activeRange = null;
+                loadData(sheet.gid);
+            }
+        }
+
+        async function loadData(gid) {
+            if(!gid) return;
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '<tr><td colspan="10" class="p-10 text-center">Syncing...</td></tr>';
+            
+            const url = `https://docs.google.com/spreadsheets/d/${SS_ID}/export?format=csv&gid=${gid}`;
+            
+            try {
+                const res = await fetch(url);
+                const csvString = await res.text();
+                
+                const results = Papa.parse(csvString, {
+                    skipEmptyLines: true,
+                    header: false
+                });
+
+                const rows = results.data.map(rowArray => {
+                    return { c: rowArray.map(val => ({ v: val, f: val })) };
+                });
+
+                if (isVerticalMode) {
+                    rawData = transformVerticalData(rows);
+                } else {
+                    rawData = rows.slice(1);
+                }
+
+                renderHeader();
+                applyFilters();
+                document.getElementById('syncStatus').innerText = 'SYNCED: ' + new Date().toLocaleTimeString();
+            } catch (e) { 
+                tbody.innerHTML = '<tr><td colspan="10" class="p-10 text-center text-red-500 font-bold">Error. Check Connection.</td></tr>'; 
+            }
+        }
+
+        function transformVerticalData(rows) {
+            let allGroupedRows = [];
+            let step = (currentType.includes('lt2')) ? 10 : 11;
+            let colCount = (currentType.includes('lt2')) ? 6 : 7;
+            let maxCols = 0;
+            rows.forEach(r => { if(r.c && r.c.length > maxCols) maxCols = r.c.length; });
+
+            const ignoreWords = ["nama produk", "barcode", "lokasi"];
+
+            for (let start = 0; start < maxCols; start += step) {
+                let currentGroupId = start; 
+                rows.forEach(row => {
+                    if (!row || !row.c) return;
+                    let chunk = [];
+                    let hasData = false;
+                    let isHeaderRow = false;
+
+                    for (let i = 0; i < colCount; i++) {
+                        let cell = row.c[start + i] || { v: "", f: "" };
+                        let val = String(cell.v || "").toLowerCase().trim();
+                        if (ignoreWords.includes(val)) isHeaderRow = true;
+                        if (cell && cell.v !== "") hasData = true;
+                        chunk.push(cell);
+                    }
+
+                    if (hasData && !isHeaderRow) {
+                        allGroupedRows.push({ c: chunk, gid: currentGroupId });
+                    }
+                });
+            }
+            return allGroupedRows;
+        }
+
+        function renderHeader() {
+            const thead = document.getElementById('tableHead');
+            if (currentType === 'input') currentHeaders = MAP_INPUT;
+            else if (currentType.includes('fencing') || currentType === 'keramik' || currentType.includes('gm')) currentHeaders = MAP_7_COL;
+            else if (currentType.includes('lt2')) currentHeaders = MAP_LT2;
+
+            thead.innerHTML = currentHeaders.map((h, i) => `
+                <th>
+                    <div>${h}</div>
+                    <input type="text" class="col-filter" placeholder="Filter..." onkeyup="applyFilters()">
+                </th>
+            `).join('');
+        }
+
+        // LOGIKA FILTER SUPER FLEKSIBEL (FUZZY SEARCH)
+        function applyFilters() {
+            const filterInputs = Array.from(document.querySelectorAll('.col-filter')).map(input => input.value.toLowerCase().trim());
+            const hasFilter = filterInputs.some(f => f !== "");
+            
+            let finalResult = [];
+            let groups = [];
+            let currentGroup = [];
+
+            let baseData = rawData;
+            if (isVerticalMode && activeRange) {
+                baseData = rawData.filter(row => row.gid >= activeRange[0] && row.gid <= activeRange[1]);
+            }
+
+            // Grouping data (untuk menangani baris Total)
+            baseData.forEach(row => {
+                let namaProduk = String(row.c[0]?.v || "").trim();
+                let col2Val = String(row.c[1]?.v || "").toLowerCase();
+                let isTotal = col2Val.includes("total");
+
+                if (namaProduk !== "" && namaProduk !== "null") {
+                    if (currentGroup.length > 0) groups.push(currentGroup);
+                    currentGroup = [row];
+                } else {
+                    currentGroup.push(row);
+                    if (isTotal) {
+                        groups.push(currentGroup);
+                        currentGroup = [];
+                    }
+                }
+            });
+            if (currentGroup.length > 0) groups.push(currentGroup);
+
+            groups.forEach(group => {
+                let groupMatches = !hasFilter;
+                
+                if (hasFilter) {
+                    groupMatches = group.some(row => {
+                        return filterInputs.every((filterValue, idx) => {
+                            if (!filterValue) return true;
+                            
+                            let cellValue = String(row.c[idx]?.v || "").toLowerCase();
+                            
+                            // Logika "Fuzzy" Fleksibel:
+                            // Pecah filterValue menjadi potongan-potongan kecil berdasarkan spasi
+                            const keywords = filterValue.split(/\s+/);
+                            
+                            // Pastikan SETIAP kata kunci ada di dalam cellValue
+                            return keywords.every(kw => cellValue.includes(kw));
+                        });
+                    });
+                }
+
+                if (groupMatches) {
+                    group.forEach(row => {
+                        let namaProduk = String(row.c[0]?.v || "").trim();
+                        let col2Val = String(row.c[1]?.v || "").toLowerCase();
+                        let isTotal = col2Val.includes("total");
+                        
+                        let qtyIdx = currentHeaders.findIndex(h => h.includes("Qty") || h === "Affary" || h === "Selisih");
+                        let isQtyZero = true;
+                        if (qtyIdx !== -1) {
+                            let val = String(row.c[qtyIdx]?.v || "").trim();
+                            let num = parseFloat(val.replace(/[^\d.-]/g, ''));
+                            if (val !== "" && val !== "0" && val !== "-" && num !== 0) isQtyZero = false;
+                        }
+
+                        if (namaProduk !== "" || isTotal || !isQtyZero) {
+                            finalResult.push(row);
+                        }
+                    });
+                }
+            });
+
+            filteredData = finalResult;
+            renderRows();
+        }
+
+        function renderRows() {
+            const tbody = document.getElementById('tableBody');
+            let html = '';
+            let count = 0;
+
+            filteredData.forEach(r => {
+                let cells = r.c.slice(0, currentHeaders.length);
+                let namaProduk = String(cells[0]?.v || "").trim();
+                let col2Val = String(cells[1]?.v || "").toLowerCase();
+                let isTotalRow = col2Val.includes("total");
+
+                count++;
+                html += `<tr>${cells.map((c, idx) => {
+                    let v = c ? c.v : '';
+                    let headerName = currentHeaders[idx];
+                    let cls = '';
+                    
+                    if (headerName.includes("Qty") || headerName === "Selisih" || headerName === "Affary") {
+                        let n = parseFloat(String(v).replace(/[^\d.-]/g, ''));
+                        if (!isNaN(n) && n < 0) {
+                            cls = 'text-minus';
+                        }
+                    }
+                    
+                    if (namaProduk !== "" || isTotalRow) cls += " font-bold bg-slate-50/50";
+
+                    return `<td class="${cls}">${v}</td>`;
+                }).join('')}</tr>`;
+            });
+
+            tbody.innerHTML = html || '<tr><td colspan="10" class="p-10 text-center">No Data Found</td></tr>';
+            document.getElementById('rowCount').innerText = `ROWS: ${count}`;
+        }
+
+        function exportToExcel() {
+            const table = document.getElementById("mainTable");
+            const ws = XLSX.utils.table_to_sheet(table);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Inventory");
+            XLSX.writeFile(wb, `Inventory_Export_${new Date().getTime()}.xlsx`);
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
